@@ -52,7 +52,21 @@ void hapusLagu(AplikasiMusik &app, int id) {
 }
 
 void tampilkanLibrary(AplikasiMusik &app) {
+    ListLagu* p = app.headLibrary;
 
+    if (p == nullptr) {
+        cout << "Library kosong\n";
+        return;
+    }
+
+    while (p != nullptr) {
+        cout << p->data.id << " | "
+             << p->data.judul << " | "
+             << p->data.artis << " | "
+             << p->data.genre << " | "
+             << p->data.tahun << endl;
+        p = p->next;
+    }
 }
 
 void buatPlaylist(AplikasiMusik &app, string nama) {
@@ -66,7 +80,33 @@ void buatPlaylist(AplikasiMusik &app, string nama) {
 }
 
 void masukLaguKePlaylist(AplikasiMusik &app, string namaPlaylist, int idLagu) {
+    ListPlaylist* p = app.headPlaylist;
+    ListLagu* lagu = app.headLibrary;
 
+    while (p != nullptr && p->namaPlaylist != namaPlaylist)
+        p = p->next;
+
+    while (lagu != nullptr && lagu->data.id != idLagu)
+        lagu = lagu->next;
+
+    if (p == nullptr || lagu == nullptr) {
+        cout << "Playlist atau lagu tidak ditemukan\n";
+        return;
+    }
+
+    ListIsiPlaylist* baru = new ListIsiPlaylist;
+    baru->referensiLagu = lagu;
+    baru->prev = nullptr;
+    baru->next = nullptr;
+
+    if (p->headLagu == nullptr) {
+        p->headLagu = baru;
+        p->tailLagu = baru;
+    } else {
+        p->tailLagu->next = baru;
+        baru->prev = p->tailLagu;
+        p->tailLagu = baru;
+    }
 }
 
 void tampilkanPlaylist(AplikasiMusik &app, string namaPlaylist) {
