@@ -28,6 +28,12 @@ void tambahLagu(AplikasiMusik &app, int id, string judul, string artis, string g
 }
 
 void bersihkanReferensi(AplikasiMusik &app, ListLagu* target) {
+    if (app.laguSedangDiputar == target) {
+        stopLagu(app);
+        cout << "[Info] Lagu yang sedang diputar dihapus, pemutaran dihentikan." << endl;
+    }
+    
+    
     while (pBantu != nullptr) {
         ListIsiPlaylist* laguDiPlaylist = pBantu->headLagu;
 
@@ -76,6 +82,159 @@ void hapusLagu(AplikasiMusik &app, int id) {
     }
     cout << "[Error] Lagu ID " << id << " tidak ditemukan." << endl;
 }
+
+void cariLaguByID(AplikasiMusik &app, int id) {
+    ListLagu* bantu = app.headLibrary;
+    bool found = false;
+    while (bantu != nullptr) {
+        if (bantu->data.id == id) {
+            cout << "[Ditemukan] " << bantu->data.judul << " - " << bantu->data.artis << endl;
+            found = true;
+            break;
+        }
+        bantu = bantu->next;
+    }
+    if (!found) cout << "[Info] Lagu dengan ID " << id << " tidak ditemukan." << endl;
+}
+
+void putarLagu(AplikasiMusik &app, int idLagu) {
+    ListLagu* bantu = app.headLibrary;
+    while (bantu != nullptr) {
+        if (bantu->data.id == idLagu) {
+            app.laguSedangDiputar = bantu;
+            app.modePlaylist = false; // Main dari library
+            app.isPlaying = true;
+            statusPlayer(app);
+            return;
+        }
+        bantu = bantu->next;
+    }
+    cout << "Lagu tidak ditemukan." << endl;
+}
+
+void putarPlaylist(AplikasiMusik &app, string namaPlaylist) {
+    ListPlaylist* pl = app.headPlaylist;
+    while (pl && pl->namaPlaylist != namaPlaylist) pl = pl->next;
+    
+    if (pl && pl->headLagu != nullptr) {
+        app.nodePlaylistDiputar = pl->headLagu;
+        app.laguSedangDiputar = pl->headLagu->referensiLagu;
+        app.modePlaylist = true; // Main dari playlist
+        app.isPlaying = true;
+        statusPlayer(app);
+    } else {
+        cout << "Playlist kosong atau tidak ditemukan." << endl;
+    }
+}
+
+void stopLagu(AplikasiMusik &app) {
+    app.isPlaying = false;
+    cout << "[Player] Berhenti memutar." << endl;
+}
+
+void nextLagu(AplikasiMusik &app) {
+    if (!app.isPlaying) {
+        cout << "Tidak ada lagu yang sedang diputar." << endl;
+        return;
+    }
+
+    if (app.modePlaylist) {
+        if (app.nodePlaylistDiputar != nullptr && app.nodePlaylistDiputar->next != nullptr) {
+            app.nodePlaylistDiputar = app.nodePlaylistDiputar->next;
+            app.laguSedangDiputar = app.nodePlaylistDiputar->referensiLagu;
+            statusPlayer(app);
+        } else {
+            cout << "[End of Playlist] Sudah di lagu terakhir." << endl;
+        }
+    } else {
+        if (app.laguSedangDiputar != nullptr && app.laguSedangDiputar->next != nullptr) {
+            app.laguSedangDiputar = app.laguSedangDiputar->next;
+            statusPlayer(app);
+        } else {
+            cout << "[End of Library] Sudah di lagu terakhir." << endl;
+        }
+    }
+}
+
+void prevLagu(AplikasiMusik &app) {
+    if (!app.isPlaying) return;
+
+    if (app.modePlaylist) {
+        if (app.nodePlaylistDiputar != nullptr && app.nodePlaylistDiputar->prev != nullptr) {
+            app.nodePlaylistDiputar = app.nodePlaylistDiputar->prev;
+            app.laguSedangDiputar = app.nodePlaylistDiputar->referensiLagu;
+            statusPlayer(app);
+        } else {
+            cout << "[Start of Playlist] Ini lagu pertama." << endl;
+        }
+    } else {
+        if (app.laguSedangDiputar != nullptr && app.laguSedangDiputar->prev != nullptr) {
+            app.laguSedangDiputar = app.laguSedangDiputar->prev;
+            statusPlayer(app);
+        } else {
+            cout << "[Start of Library] Ini lagu pertama." << endl;
+        }
+    }
+}
+
+void statusPlayer(AplikasiMusik &app) {
+    if (app.isPlaying && app.laguSedangDiputar != nullptr) {
+        cout << "\n>>> NOW PLAYING >>>" << endl;
+        cout << "Judul : " << app.laguSedangDiputar->data.judul << endl;
+        cout << "Artis : " << app.laguSedangDiputar->data.artis << endl;
+        cout << "Mode  : " << (app.modePlaylist ? "Playlist" : "Library") << endl;
+        cout << "-------------------" << endl;
+    } else {
+        cout << "[Player Idle]" << endl;
+    }
+}
+
+void hapusLaguDariPlaylist(AplikasiMusik &app, string namaPlaylist, int idLagu) {
+    ListPlaylist* pl = app.headPlaylist;
+    while (pl != nullptr && pl->namaPlaylist != namaPlaylist) pl = pl->next;
+    if (!pl) { cout << "Playlist tidak ditemukan." << endl; return; }
+
+    ListIsiPlaylist* bantu = pl->headLagu;
+    while (bantu != nullptr) {
+        if (bantu->referensiLagu->data.id == idLagu) {
+            if (app.isPlaying && app.nodePlaylistDiputar == bantu) {
+                stopLagu(app); 
+                cout << "[Info] Lagu sedang diputar, player dihentikan." << endl;
+            }
+
+            if (bantu->prev) bantu->prev->next = bantu->next;
+            else pl->headLagu = bantu->next;
+
+            if (bantu->next) bantu->next->prev = bantu->prev;
+            else pl->tailLagu = bantu->prev;
+
+            delete bantu;
+            cout << "[Info] Lagu berhasil dihapus dari playlist '" << namaPlaylist << "'." << endl;
+            return;
+        }
+        bantu = bantu->next;
+    }
+    cout << "[Info] Lagu tidak ditemukan di playlist ini." << endl;
+}
+
+void cariLaguByTeks(AplikasiMusik &app, string keyword) {
+    cout << "\nHasil Pencarian '" << keyword << "':" << endl;
+    ListLagu* bantu = app.headLibrary;
+    bool found = false;
+    while (bantu != nullptr) {
+        // Cek Judul ATAU Artis ATAU Genre (Pencarian Parsial)
+        if (bantu->data.judul.find(keyword) != string::npos || 
+            bantu->data.artis.find(keyword) != string::npos ||
+            bantu->data.genre.find(keyword) != string::npos) {
+            
+            cout << "- " << bantu->data.judul << " (" << bantu->data.artis << ") [" << bantu->data.genre << "]" << endl;
+            found = true;
+        }
+        bantu = bantu->next;
+    }
+    if (!found) cout << "Tidak ada lagu yang cocok." << endl;
+}
+
 
 void tampilkanLibrary(AplikasiMusik &app) {
     cout << "\n=== LIBRARY MUSIK ===" << endl;
